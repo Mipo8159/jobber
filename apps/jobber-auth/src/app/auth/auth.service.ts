@@ -1,0 +1,57 @@
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Response } from 'express';
+import { compare } from 'bcryptjs';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { LoginInput } from './dto/login.input';
+import { TokenPayload } from './interfaces/token-payload.interface';
+import { UsersService } from '../user/users.service';
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly config: ConfigService,
+    private readonly jwtService: JwtService
+  ) {}
+
+  async login({ email, password }: LoginInput, res: Response) {
+    const user = await this.verifyUser(email, password);
+
+    const expires = new Date();
+    expires.setMilliseconds(
+      expires.getTime() + parseInt(this.config.getOrThrow('JWT_EXPIRATION_MS'))
+    );
+
+    const tokenPayload: TokenPayload = {
+      userId: user.id,
+    };
+
+    const accessToken = this.jwtService.sign(tokenPayload);
+
+    res.cookie('Authentication', accessToken, {
+      httpOnly: true,
+      secure: this.config.get('NODE_ENV') === 'production',
+      expires,
+    });
+    return user;
+  }
+
+  private async verifyUser(email: string, password: string) {
+    try {
+      const user = await this.usersService.getUser({
+        email,
+      });
+
+      const authenticated = await compare(password, user.password);
+
+      if (!authenticated) {
+        throw new UnauthorizedException();
+      }
+
+      return user;
+    } catch (err) {
+      throw new UnauthorizedException(err.message);
+    }
+  }
+}
