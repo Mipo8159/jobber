@@ -18,6 +18,15 @@ services:
       - jobber-net
     restart: unless-stopped
 
+  pulsar:
+    image: apachepulsar/pulsar
+    command: >
+      /pulsar/bin/pulsar standalone
+    ports:
+      - 6650:6650
+    networks:
+      - jobber-net
+
 volumes:
   auth-data:
     driver: local

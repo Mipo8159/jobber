@@ -25,7 +25,6 @@ export class JobsService implements OnModuleInit {
   }
 
   getJobs() {
-    console.log('JOBS', this.jobs);
     return this.jobs.map((job) => job.meta);
   }
 
